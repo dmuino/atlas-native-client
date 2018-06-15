@@ -12,8 +12,8 @@ namespace meter {
 
 class Tags {
   using K = util::StrRef;
-  using table_t = util::SmallTagMap;
   using value_t = util::StrRef;
+  using table_t = util::SmallTagMap;
   table_t entries_;
 
  public:
@@ -31,7 +31,7 @@ class Tags {
 
   void add(K k, K v) { entries_.add(k, v); }
 
-  void add(const char* k, const char* v) { entries_.add(k, v); }
+  void add(const char* k, const char* v) { entries_.add(util::intern_str(k), util::intern_str(v)); }
 
   size_t hash() const { return entries_.hash(); }
 
@@ -89,6 +89,7 @@ class Id {
     return hash_;
   }
 };
+
 
 using IdPtr = std::shared_ptr<Id>;
 

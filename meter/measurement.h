@@ -8,8 +8,12 @@ namespace meter {
 
 struct Measurement {
   IdPtr id;
-  const int64_t timestamp;
-  const double value;
+  int64_t timestamp;
+  double value;
+
+  bool operator==(const Measurement& other) const {
+    return other.timestamp == timestamp && std::abs(value - other.value) < 1e-9 && *id == *(other.id);
+  }
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Measurement& m) {

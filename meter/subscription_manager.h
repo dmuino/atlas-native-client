@@ -5,6 +5,7 @@
 #include "../util/http.h"
 #include "../interpreter/evaluator.h"
 #include "publisher.h"
+#include "aggregate_registry.h"
 #include <condition_variable>
 #include <mutex>
 #include <set>
@@ -34,7 +35,8 @@ class SubscriptionManager {
  private:
   interpreter::Evaluator evaluator_;
   const util::ConfigManager& config_manager_;
-  std::shared_ptr<Registry> registry_;  // main registry
+  std::shared_ptr<Registry> registry_;  // 5s registry
+  std::unique_ptr<AggregateRegistry> main_registry_;
   Publisher publisher_;
 
   std::string current_etag;
