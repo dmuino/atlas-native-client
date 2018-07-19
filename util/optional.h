@@ -24,9 +24,7 @@ class OptionalString {
     return s_ref.valid() && atlas::util::intern_str(other) == s_ref;
   }
 
-  bool operator==(atlas::util::StrRef other) const {
-    return s_ref == other;
-  }
+  bool operator==(atlas::util::StrRef other) const { return s_ref == other; }
 
   bool operator<(atlas::util::StrRef other) const {
     if (s_ref.valid() && other.valid()) {
@@ -58,9 +56,7 @@ class OptionalString {
 
   const char* get() const { return s_ref.get(); }
 
-  size_t length() const {
-    return s_ref.length();
-  }
+  size_t length() const { return s_ref.length(); }
 
  private:
   atlas::util::StrRef s_ref;

@@ -1,6 +1,7 @@
 #include "query.h"
 #include "../meter/id.h"
 #include "../util/logger.h"
+#include "../util/vector.h"
 
 namespace atlas {
 namespace interpreter {
@@ -8,12 +9,6 @@ namespace interpreter {
 using util::intern_str;
 using util::Logger;
 using util::StrRef;
-
-bool Query::IsTrue() const noexcept { return false; }
-
-bool Query::IsFalse() const noexcept { return false; }
-
-bool Query::IsRegex() const noexcept { return false; }
 
 HasKeyQuery::HasKeyQuery(StrRef key_ref) : AbstractKeyQuery(key_ref) {}
 
@@ -36,7 +31,7 @@ std::ostream& HasKeyQuery::Dump(std::ostream& os) const {
 AbstractKeyQuery::AbstractKeyQuery(StrRef key_ref) noexcept
     : key_ref_(key_ref) {}
 
-const OptionalString AbstractKeyQuery::getvalue(const meter::Tags& tags) const
+OptionalString AbstractKeyQuery::getvalue(const meter::Tags& tags) const
     noexcept {
   auto k = tags.at(KeyRef());
   if (k.valid()) {
@@ -49,7 +44,7 @@ const char* AbstractKeyQuery::Key() const noexcept { return key_ref_.get(); }
 
 StrRef AbstractKeyQuery::KeyRef() const noexcept { return key_ref_; }
 
-RelopQuery::RelopQuery(util::StrRef k, util::StrRef v, RelOp op)
+RelopQuery::RelopQuery(util::StrRef k, util::StrRef v, RelOp op) noexcept
     : AbstractKeyQuery(k), op_(op), value_ref_(v) {}
 
 bool RelopQuery::Matches(const meter::Tags& tags) const {
@@ -141,8 +136,8 @@ static bool MatchesRegex(pcre* pattern, const std::string& str_pattern,
 
   int offsets[kOffsetsMax];
   auto rc =
-      pcre_exec(pattern, nullptr, value.get(),
-                static_cast<int>(value.length()), 0, 0, offsets, kOffsetsMax);
+      pcre_exec(pattern, nullptr, value.get(), static_cast<int>(value.length()),
+                0, 0, offsets, kOffsetsMax);
   if (rc >= 0) {
     return true;
   }
@@ -183,8 +178,6 @@ std::ostream& RegexQuery::Dump(std::ostream& os) const {
   os << "RegexQuery(" << Key() << " ~ " << str_pattern << ")";
   return os;
 }
-
-bool RegexQuery::IsRegex() const noexcept { return true; }
 
 RegexQuery::~RegexQuery() {
   if (pattern != nullptr) {
@@ -347,10 +340,11 @@ std::shared_ptr<Query> query::or_q(std::shared_ptr<Query> q1,
   if (*q1 == *q2) {
     return q1;
   }
-  if (q1->IsRegex()) {
-    return std::make_shared<OrQuery>(q2, q1);
-  }
-  return std::make_shared<OrQuery>(q1, q2);
+  auto q1Type = q1->GetQueryType();
+  auto isExpensive = q1Type == QueryType::Regex || q1Type == QueryType::And ||
+                     q1Type == QueryType::Or;
+  return isExpensive ? std::make_shared<OrQuery>(q2, q1)
+                     : std::make_shared<OrQuery>(q1, q2);
 }
 
 std::shared_ptr<Query> query::and_q(std::shared_ptr<Query> q1,
@@ -370,10 +364,33 @@ std::shared_ptr<Query> query::and_q(std::shared_ptr<Query> q1,
   if (*q1 == *q2) {
     return q1;
   }
-  if (q1->IsRegex()) {
-    return std::make_shared<AndQuery>(q2, q1);
-  }
-  return std::make_shared<AndQuery>(q1, q2);
+
+  auto q1Type = q1->GetQueryType();
+  auto isExpensive = q1Type == QueryType::Regex || q1Type == QueryType::And ||
+                     q1Type == QueryType::Or;
+  return isExpensive ? std::make_shared<AndQuery>(q2, q1)
+                     : std::make_shared<AndQuery>(q1, q2);
 }
+
+std::vector<std::shared_ptr<Query>> query::dnf_list(
+    std::shared_ptr<Query> query) {
+  // HasKey, RelOp, Regex, In, True, False, Not, Or, And
+  switch (query->GetQueryType()) {
+    case QueryType::And: {
+      auto& and_q = static_cast<AndQuery&>(*query);
+      std::function<std::shared_ptr<Query>(const std::shared_ptr<Query>&,
+                                           const std::shared_ptr<Query>&)>
+          f = query::and_q;
+      return vector_cross_product(dnf_list(and_q.q1_), dnf_list(and_q.q2_), f);
+    }
+    case QueryType::Or: {
+      auto& or_q = static_cast<OrQuery&>(*query);
+      return vector_concat(dnf_list(or_q.q1_), dnf_list(or_q.q2_));
+    }
+    default:
+      return std::vector<std::shared_ptr<Query>>{};
+  }
+}
+
 }  // namespace interpreter
 }  // namespace atlas

@@ -118,7 +118,8 @@ inline bool IsQuery(const Expression& e) noexcept {
 }
 
 inline bool Is(const Expression& e, const char* s) noexcept {
-  return IsLiteral(e) && static_cast<const Literal&>(e).AsString() == util::intern_str(s);
+  return IsLiteral(e) &&
+         static_cast<const Literal&>(e).AsString() == util::intern_str(s);
 }
 
 inline bool IsWord(const Expression& e) noexcept {

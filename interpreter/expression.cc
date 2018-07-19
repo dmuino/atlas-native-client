@@ -9,9 +9,12 @@ using meter::Measurements;
 using util::intern_str;
 using util::Logger;
 
-Literal::Literal(const std::string& str) noexcept : s_ref(intern_str(str.c_str())) {}
+Literal::Literal(const std::string& str) noexcept
+    : s_ref(intern_str(str.c_str())) {}
 
-bool Literal::Is(const std::string& str) const noexcept { return strcmp(s_ref.get(), str.c_str()) == 0; }
+bool Literal::Is(const std::string& str) const noexcept {
+  return strcmp(s_ref.get(), str.c_str()) == 0;
+}
 
 std::ostream& Literal::Dump(std::ostream& os) const {
   os << "Literal(" << s_ref.get() << ")";

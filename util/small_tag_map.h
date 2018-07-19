@@ -49,8 +49,8 @@ static constexpr size_t kMaxEntries = 32u;
 }  // namespace detail
 
 class SmallTagMap : private detail::prime_number_hash_policy {
-  using K=StrRef;
-  using V=StrRef;
+  using K = StrRef;
+  using V = StrRef;
   using value_type = std::pair<K, V>;
 
   void init_from(const SmallTagMap& other) {
@@ -72,7 +72,8 @@ class SmallTagMap : private detail::prime_number_hash_policy {
  public:
   SmallTagMap() noexcept { init(); }
 
-  SmallTagMap(const SmallTagMap& other) noexcept : prime_number_hash_policy(other) {
+  SmallTagMap(const SmallTagMap& other) noexcept
+      : prime_number_hash_policy(other) {
     init_from(other);
   }
 
